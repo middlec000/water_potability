@@ -1,0 +1,131 @@
+---
+title: "Practice: Random Forest - Wine Quality"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+------------------------------------------------------------------------
+
+Practice example from: https://www.simplilearn.com/tutorials/data-science-tutorial/random-forest-in-r 
+
+# Import and Explore Data
+
+```{r}
+wine <- read.csv(url("https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"), header = TRUE, sep = ";") # This command is used to load the dataset
+
+head(wine) # Display the head and dimensions of wine dataset
+```
+
+```{r}
+t(do.call(cbind, lapply(wine, summary)))
+```
+
+Look at missing values.
+
+```{r}
+cbind(colSums(is.na(wine)))
+```
+
+No missing values - good!
+
+Look at outcome measures.
+
+```{r}
+barplot(table(wine$quality), xlab='Taste', ylab='Frequency') # Barplot to see the quality of wines. The output looks like below
+```
+
+# Prepare Data for Model
+Convert the quality values into factors.
+
+```{r}
+wine$taste <- ifelse(wine$quality < 5, "bad", "good")
+
+wine$taste[wine$quality == 5] <- "normal"
+
+wine$taste[wine$quality == 6] <- "normal"
+
+wine$taste <- as.factor(wine$taste)
+
+barplot(table(wine$taste), xlab='Taste', ylab='Frequency')
+```
+
+Split data into training and testing.
+
+```{r}
+set.seed(123)
+samp <- sample(nrow(wine), 0.8 * nrow(wine))
+train <- wine[samp, ]
+test <- wine[-samp, ]
+```
+
+## Data Exploration/Visualization.
+
+```{r}
+library(ggplot2)
+ggplot(wine,aes(fixed.acidity,volatile.acidity))+ geom_point(aes(color=taste))# This command is used to display a scatter plot. The output looks like below
+```
+
+
+```{r}
+ggplot(wine,aes(alcohol)) + geom_histogram(aes(fill=taste),color='black',bins=50) # This command is used to display a stacked bar chart. The output looks like below
+```
+
+# Build Random Forest Model
+
+Train model using training data.
+```{r}
+library(randomForest)
+
+model <- randomForest(taste ~ . - quality, data = train, ntree = 1000, mtry = 5)
+
+model
+```
+
+Now test model performance on new data using testing data.
+
+```{r}
+prediction <- predict(model, newdata = test)
+
+table(prediction, test$taste)
+```
+
+Calculate model accuracy.
+
+
+```{r}
+library(caret)
+
+confusionMatrix(prediction, test$taste)
+```
+
+```{r}
+summary(train$taste) * 100 / length(train$taste)
+```
+
+```{r}
+summary(test$taste) * 100 / length(test$taste)
+```
+
+
+# Conclusion
+Overall model performance seems good - accuracy is 90%, but the model does a poor job of correctly classifying 'bad' tasting wine (sensitivity = 9%) and only a moderate job at correctly classifying 'good' wine (sensitivity = 62%). The model seems to be favoring the prediction of 'normal' taste, which is expected since that class is overrepresented. If the model decided to predict all test data as 'normal' it would have an accuracy of 87.5%, only slightly less than the score it actually achieved.
+
+This model would be best suited for predicting which wines have 'normal' taste.
+
+## Reference
+True Positive (for Class X): Number of subject which have been correctly classified as class x.  
+All Positives (for Class X): Number of subjects actually in class x.  
+True Negatives (for Class X): Number of subjects which have been correctly classified as not class x.  
+All Negatives (for Class X): Number of subjects actually not in class X.
+
+$$
+\text{Sensitivity} = \frac{\text{True Positives}}{\text{All Positives}}
+$$
+$$
+\text{Specificity} = \frac{\text{True Negatives}}{\text{All Negatives}}
+$$
