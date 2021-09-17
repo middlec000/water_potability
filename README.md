@@ -1,2 +1,2 @@
-# water_potability
-Classify water as either potable or non-potable based on given attributes.
+# wine_quality
+Classify wine as one of 6 quality rankings based on given wine attributes.
